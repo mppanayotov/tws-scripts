@@ -18,7 +18,16 @@ uv venv .venv
 uv pip install --python .venv\Scripts\python.exe -e .
 ```
 
-The project pins the official `ibapi==9.81.1.post1`. In TWS, enable API socket clients and keep API Read-Only enabled while using this paper-only build. TWS paper commonly uses port 7497; live commonly uses 7496. Both may be changed with `IBKR_PAPER_PORT` and `IBKR_LIVE_PORT`. Configure an account locally with `IBKR_ACCOUNT`; never commit account IDs or credentials.
+Install the official Interactive Brokers API from its local source distribution, then install this package. Do not substitute an unrelated PyPI package:
+
+```powershell
+cd "C:\TWS API\source\pythonclient"
+C:\Users\mppan\repos\tws-scripts\vwce-buy\.venv\Scripts\python.exe -m pip install .
+cd C:\Users\mppan\repos\tws-scripts\vwce-buy
+.\.venv\Scripts\python.exe -m pip install -e .
+```
+
+In TWS, enable API socket clients and keep API Read-Only enabled while using this paper-only build. PAPER uses port 7497; port 7496 is rejected. Configure `IBKR_PAPER_ACCOUNT` locally for integration diagnostics; never commit account IDs or credentials.
 
 ## Usage
 
@@ -28,6 +37,10 @@ vwce-buy 168.60 --paper
 ```
 
 The future live form is `vwce-buy 168.60 --live`; it is dangerous and intentionally disabled in this release.
+
+## WhatIf preview output
+
+IBKR WhatIf commission and margin values are preview data from IBKR. Unavailable values display as `N/A`. A callback status such as `PreSubmitted` is not a working order; the integration independently checks open orders and positions afterward. A WhatIf preview is neither an execution nor a fill.
 
 Audit records are JSON Lines under the user data directory (`%LOCALAPPDATA%\\tws-scripts\\audit` on Windows, or `$XDG_DATA_HOME/tws-scripts/audit` on other systems). Account IDs are masked. Paper executions are simulated; live execution uses real money when later enabled. No market-data subscription is required because no market-data API is called.
 
