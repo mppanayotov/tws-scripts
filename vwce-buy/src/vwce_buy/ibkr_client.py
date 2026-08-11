@@ -98,16 +98,14 @@ class PaperWhatIfClient(ReadOnlyPaperClient):
         return WhatIfResult("PREVIEW_RECEIVED", order_id, state=self.callbacks.whatif_states[order_id])
 
 class PaperOrderClient(ReadOnlyPaperClient):
-    """The only normal-order writer; one submission per client instance."""
-    def __init__(self, host: str, port: int, client_id: int = 42) -> None: super().__init__(host, port, client_id); self._submitted = False
+    """The only normal-order writer; each invocation sends one PAPER order."""
     def reserve_after_order_id(self, consumed_order_id: int) -> None:
         if self.callbacks.next_order_id is None: raise RuntimeError("ABORT: No nextValidId received for PAPER order.")
         self.callbacks.next_order_id = max(self.callbacks.next_order_id, consumed_order_id + 1)
     def submit_vwce_order(self, approved: ApprovedPaperOrder, timeout: float = 15) -> PaperOrderResult:
-        if self._submitted: raise RuntimeError("ABORT: PAPER order submission was already attempted; no retry is allowed.")
         if self.callbacks.next_order_id is None: raise RuntimeError("ABORT: No nextValidId received for PAPER order.")
         if getattr(approved.order, "whatIf", True): raise ValueError("ABORT: WhatIf order cannot reach PAPER order submission.")
-        order_id = self.callbacks.next_order_id; self.callbacks.next_order_id += 1; self._submitted = True; self.callbacks.order_update_events[order_id] = Event()
+        order_id = self.callbacks.next_order_id; self.callbacks.next_order_id += 1; self.callbacks.order_update_events[order_id] = Event()
         self._request("paperOrder", self._client.placeOrder, order_id, approved.contract, approved.order)
         self.callbacks.order_update_events[order_id].wait(timeout)
         update = self.callbacks.order_updates.get(order_id, {})

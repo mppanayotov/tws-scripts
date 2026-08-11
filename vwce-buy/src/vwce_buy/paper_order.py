@@ -67,15 +67,6 @@ def build_paper_order(account: str, price: Decimal) -> Order:
     return order
 
 
-def paper_confirmation_phrase(price: Decimal) -> str:
-    return f"PAPER BUY 1 VWCE AT {price:.2f} VIA IBIS2"
-
-
-def require_paper_confirmation(price: Decimal, typed: str) -> None:
-    if typed != paper_confirmation_phrase(price):
-        raise ValueError("ABORT: PAPER confirmation mismatch.")
-
-
 def validate_paper_order(*, account: str, configured_account: str, limit: Decimal, increment: Decimal,
                          available_eur: Decimal, resolved: ResolvedContract, contract: Contract, order: Order,
                          session: str, duplicate: bool, host: str, port: int, client_id: int,

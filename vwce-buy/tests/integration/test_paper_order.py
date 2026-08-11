@@ -10,14 +10,14 @@ from vwce_buy.guards import parse_price
 from vwce_buy.ibkr_client import PaperOrderClient, PaperWhatIfClient
 from vwce_buy.open_orders import has_active_vwce_buy
 from vwce_buy.order import build_contract
-from vwce_buy.paper_order import approve_paper_order, build_paper_order, paper_confirmation_phrase, require_paper_confirmation, require_paper_order_gate
+from vwce_buy.paper_order import approve_paper_order, build_paper_order, require_paper_order_gate
 from vwce_buy.positions import vwce_position
 from vwce_buy.sessions import session_state
 from vwce_buy.whatif import build_whatif_order, require_tick_aligned, tick_increment
 from vwce_buy.whatif_preview import display_value, normalize_order_state
 
 @pytest.mark.integration
-def test_paper_order_once_after_preview_and_exact_confirmation():
+def test_paper_order_once_after_preview():
     account_env, limit_env = os.getenv("IBKR_PAPER_ACCOUNT"), os.getenv("IBKR_PAPER_ORDER_LIMIT")
     if os.getenv("IBKR_RUN_PAPER_TESTS") != "1" or os.getenv("IBKR_RUN_PAPER_ORDER") != "1" or not account_env or not limit_env:
         pytest.skip("set all PAPER order gates: IBKR_RUN_PAPER_TESTS, IBKR_RUN_PAPER_ORDER, IBKR_PAPER_ACCOUNT, IBKR_PAPER_ORDER_LIMIT")
@@ -34,9 +34,6 @@ def test_paper_order_once_after_preview_and_exact_confirmation():
         whatif = preview_client.preview_vwce_order(build_contract(resolved), build_whatif_order(account, price))
     if whatif.outcome != "PREVIEW_RECEIVED": pytest.fail(f"ABORT: PAPER WhatIf must be PREVIEW_RECEIVED, got {whatif.outcome}: {whatif.reason}")
     preview = normalize_order_state(whatif.state); print("PAPER WHATIF PREVIEW\n" + "\n".join(f"{label}: {display_value(getattr(preview, field))}" for label, field in (("Status", "status"), ("Commission", "commission_and_fees"), ("Warning", "warning_text"), ("Reject reason", "reject_reason"))))
-    try: typed = input(f"Type exactly: {paper_confirmation_phrase(price)}\n")
-    except (EOFError, KeyboardInterrupt): pytest.fail("ABORT: PAPER confirmation unavailable.")
-    require_paper_confirmation(price, typed)
     order = build_paper_order(account, price); approved = approve_paper_order(account=account, configured_account=account_env, limit=price, increment=tick, available_eur=funds, resolved=resolved, contract=build_contract(resolved), order=order, session=session, duplicate=duplicate, host=settings.host, port=settings.port, client_id=settings.client_id, configured_limit=limit_env)
     with PaperOrderClient(settings.host, settings.port, settings.client_id) as order_client:
         order_client.reserve_after_order_id(whatif.order_id)

@@ -4,7 +4,7 @@ import pytest
 from vwce_buy.contract import ResolvedContract
 from vwce_buy.ibkr_client import PaperOrderClient
 from vwce_buy.order import build_contract
-from vwce_buy.paper_order import approve_paper_order, build_paper_order, require_paper_confirmation, require_paper_order_gate, validate_paper_order
+from vwce_buy.paper_order import approve_paper_order, build_paper_order, require_paper_order_gate, validate_paper_order
 
 def test_paper_order_submission_is_gated_exact_and_single_attempt(monkeypatch):
     monkeypatch.setenv("IBKR_RUN_PAPER_TESTS", "1"); monkeypatch.setenv("IBKR_RUN_PAPER_ORDER", "1")
@@ -19,7 +19,6 @@ def test_paper_order_submission_is_gated_exact_and_single_attempt(monkeypatch):
     for attribute, value in (("action", "SELL"), ("totalQuantity", 2), ("orderType", "MKT"), ("tif", "GTC"), ("outsideRth", True), ("whatIf", True), ("transmit", False)):
         unsafe_order = build_paper_order("DU1234", Decimal("160.00")); setattr(unsafe_order, attribute, value)
         with pytest.raises(ValueError): validate_paper_order(**(kwargs | {"order": unsafe_order}))
-    with pytest.raises(ValueError): require_paper_confirmation(Decimal("160.00"), " PAPER BUY 1 VWCE AT 160.00 VIA IBIS2")
     require_paper_order_gate("DU1234", "160.00", "127.0.0.1", 7497, 42)
     client = PaperOrderClient("127.0.0.1", 7497, 42); client.callbacks.next_order_id = 100; called = []
     def place_order(order_id, *_):
@@ -27,7 +26,8 @@ def test_paper_order_submission_is_gated_exact_and_single_attempt(monkeypatch):
     monkeypatch.setattr(client._client, "placeOrder", place_order)
     result = client.submit_vwce_order(approved, timeout=0.01)
     assert result.order_id == 100 and result.status == "Submitted" and not result.is_filled and result.is_working and called == [100]
-    with pytest.raises(RuntimeError, match="no retry"): client.submit_vwce_order(approved)
+    retry = client.submit_vwce_order(approved, timeout=0.01)
+    assert retry.order_id == 101 and called == [100, 101]
     client.callbacks.orderStatus(100, "Filled", 1, 0, 160, 7, 0, 160, 42, "", 0)
     client.callbacks.execDetails(-1, SimpleNamespace(), SimpleNamespace(orderId=100, execId="x", time="20260811 10:00:00", acctNumber="DU1234", side="BOT", shares=1, price=160, exchange="IBIS2", permId=7))
     update = client.callbacks.order_updates[100]

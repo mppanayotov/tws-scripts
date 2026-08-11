@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+
+- Remove interactive confirmation and the single-attempt latch from the explicitly gated PAPER integration path.
+
 ## 0.2.0
 
 - Add the tightly gated, human-confirmed PAPER normal-order implementation.
