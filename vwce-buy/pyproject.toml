@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vwce-buy"
-version = "0.1.0"
+version = "0.2.0"
 description = "Restricted VWCE paper/live order-entry utility for IBKR TWS"
 requires-python = ">=3.11"
 dependencies = ["tzdata>=2025.2"]

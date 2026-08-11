@@ -4,7 +4,7 @@
 
 ## Status and safety
 
-This initial build is paper-only: its default path validates and records a PAPER preview, then submits no order. `--live` requires the exact typed phrase but is intentionally disabled. No live order was executed while building or testing it.
+This build remains PAPER-only. The default CLI validates and records a PAPER preview, then submits no order. A separate human-run integration test now implements the first normal PAPER order behind four explicit environment gates, a WhatIf preview, and an exact typed confirmation. `--live` is intentionally disabled. No live order was executed while building or testing it.
 
 The fixed order shape is BUY, one whole share, LMT, DAY, `outsideRth=False`, route `IBIS2`, and order reference `VWCE_DCA`. The price is the only trading input. It rejects non-positive or over-precision prices, values over EUR 250, non-local hosts, and live submissions. It never requests market data.
 
@@ -36,7 +36,7 @@ vwce-buy 168.60
 vwce-buy 168.60 --paper
 ```
 
-The future live form is `vwce-buy 168.60 --live`; it is dangerous and intentionally disabled in this release.
+The future live form is `vwce-buy 168.60 --live`; it is dangerous and intentionally disabled in this release. The PAPER transport test is intentionally not a normal CLI command. After reviewing the source, a human may run it once with all of `IBKR_RUN_PAPER_TESTS=1`, `IBKR_RUN_PAPER_ORDER=1`, `IBKR_PAPER_ACCOUNT`, and `IBKR_PAPER_ORDER_LIMIT` set, then type the displayed confirmation phrase exactly.
 
 ## WhatIf preview output
 
@@ -46,4 +46,8 @@ Audit records are JSON Lines under the user data directory (`%LOCALAPPDATA%\\tws
 
 ## Limitations
 
-The offline build does not yet collect contract details, account cash, open orders, positions, session schedules, or WhatIf callbacks from a paper TWS instance. Therefore it fails closed by not submitting. A future activation must add and test those callback collectors before paper submission is enabled; integration tests must remain opt-in through `IBKR_RUN_PAPER_TESTS=1` and must never target live TWS.
+The normal PAPER-order integration uses a fresh normal-order ID after the WhatIf ID, submits once at most, collects status and execution callbacks, and reconciles open orders and positions. It does not retry, cancel, modify, reprice, request market data, or expose LIVE order submission. Integration tests remain opt-in and must never target LIVE TWS.
+
+## Versioning and CI
+
+The canonical version is mirrored in `VERSION`, `pyproject.toml`, `vwce_buy.__version__`, and the current `CHANGELOG.md` entry. Create a signed annotated tag as `v<version>` only after the matching release commit is reviewed. GitHub Actions runs the unit suite on Windows and Linux for Python 3.11 and 3.12, and rejects a pushed version tag that does not match `VERSION` and `pyproject.toml`.
