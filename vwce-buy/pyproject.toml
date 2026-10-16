@@ -4,13 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vwce-buy"
-version = "0.2.1"
+version = "0.3.0"
 description = "Restricted VWCE paper/live order-entry utility for IBKR TWS"
 requires-python = ">=3.11"
 dependencies = ["tzdata>=2025.2"]
 
 [project.scripts]
 vwce-buy = "vwce_buy.cli:main"
+vwce = "vwce_buy.status_cli:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

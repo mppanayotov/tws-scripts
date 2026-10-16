@@ -1,12 +1,39 @@
 # vwce-buy
 
-`vwce-buy` is a deliberately restricted command for one VWCE (ISIN `IE00BK5BQT80`) EUR limit purchase through the official IBKR TWS API. It is not a trading bot, market-data tool, generic order client, or portfolio allocator.
+This package provides `vwce`, a read-only status report, and `vwce-buy`, a deliberately restricted preview/order utility for VWCE (ISIN `IE00BK5BQT80`) in EUR through the official IBKR TWS API.
+
+## vwce status
+
+After installing or upgrading this package in the virtual environment, run:
+
+```powershell
+.\.venv\Scripts\vwce.exe
+.\.venv\Scripts\vwce.exe --json
+```
+
+With the virtual environment activated, the command is simply `vwce`. It connects to PAPER TWS at `127.0.0.1:7497`; TWS can remain in API Read-Only mode. No account ID is required, no account or portfolio data is requested, and no order or WhatIf request is sent. This reporting transport is separate from the existing order clients.
+
+The report prints:
+
+- `OPEN`, `CLOSED`, or `UNKNOWN`, using the resolved VWCE IBIS2 contract's IBKR `liquidHours` and exchange time zone. Unknown data is never treated as a closed market.
+- Today's trading windows, elapsed trading time, remaining trading time, and percentage complete. Before the first opening it is 0%; after the final close it is 100%. Breaks do not count toward elapsed trading time. Explicit non-trading days have no progress percentage.
+- Median opening price and median closing price over the last 30 completed trading sessions.
+- Median daily typical price, where each day's typical price is `(high + low + close) / 3`. This is a median of daily summaries, not a median of all intraday trades or a volume-weighted price.
+- The exact historical date range and the report timestamp. Text prices are displayed to two decimal places; JSON retains the calculated Decimal values as strings.
+
+One finite IBKR historical request retrieves up to three months of daily `TRADES` bars with `useRTH=1` and `keepUpToDate=False`. The latest 30 completed dates are selected. Today's incomplete bar is excluded; today becomes eligible only after the final verified regular-hours close. IBKR `TRADES` prices are split-adjusted and are not adjusted for cash distributions. No streaming quotes, polling, cache, inferred holiday calendar, or fallback data provider is used.
+
+Historical data requires the applicable IBKR data permissions. A permission error, timeout, invalid bar, or fewer than 30 completed sessions produces an explicit unavailable result and exit code 2. If contract and schedule data succeeded, that session status remains visible when history fails. Successful complete reports return 0. A closed session is a valid status and is not an error. Displayed historical medians are descriptive and are not an executable buy-price recommendation.
+
+The status connection uses a separate default client ID of 74. Set `IBKR_STATUS_CLIENT_ID` or use `--client-id` if it conflicts with another API client. `--timeout` controls each finite request, defaulting to 20 seconds. `IBKR_HOST` and `IBKR_PAPER_PORT` are read, but this build still requires `127.0.0.1:7497`.
+
+See [the proposed buy-limit mechanism](docs/buy-price-suggestion.md) for a future quote-aware suggestion. It is a proposal and is not implemented by this command.
 
 ## Status and safety
 
 This build remains PAPER-only. The default CLI validates and records a PAPER preview, then submits no order. A separate, explicitly gated integration test implements the first normal PAPER order after a WhatIf preview. `--live` is intentionally disabled. No live order was executed while building or testing it.
 
-The fixed order shape is BUY, one whole share, LMT, DAY, `outsideRth=False`, route `IBIS2`, and order reference `VWCE_DCA`. The price is the only trading input. It rejects non-positive or over-precision prices, values over EUR 250, non-local hosts, and live submissions. It never requests market data.
+The fixed order shape is BUY, one whole share, LMT, DAY, `outsideRth=False`, route `IBIS2`, and order reference `VWCE_DCA`. The price is the only trading input. It rejects non-positive or over-precision prices, values over EUR 250, non-local hosts, and live submissions. The order clients never request market data; the separate status client requests historical bars only.
 
 ## Install
 
@@ -50,4 +77,13 @@ The normal PAPER-order integration uses a fresh normal-order ID after the WhatIf
 
 ## Versioning and CI
 
-The canonical version is mirrored in `VERSION`, `pyproject.toml`, `vwce_buy.__version__`, and the current `CHANGELOG.md` entry. Create a signed annotated tag as `v<version>` only after the matching release commit is reviewed. GitHub Actions runs the unit suite on Windows and Linux for Python 3.11 and 3.12, and rejects a pushed version tag that does not match `VERSION` and `pyproject.toml`.
+The canonical version is mirrored in `VERSION`, `pyproject.toml`, `vwce_buy.__version__`, and the current `CHANGELOG.md` entry. Create a signed annotated tag as `v<version>` only after the matching release commit is reviewed. GitHub Actions runs the unit suite on Windows and Linux for Python 3.11 and 3.12, and rejects a pushed version tag that does not match the canonical version.
+
+From the repository root, run the same correctness gate locally:
+
+```powershell
+.\vwce-buy\.venv\Scripts\python.exe -B scripts/repository_quality_gate.py
+.\vwce-buy\.venv\Scripts\python.exe -B scripts/repository_quality_gate.py --version-only --tag v0.3.0
+```
+
+An installed MPP toolchain can be supplied with `--cache-root` after its cache preflight; its Format/Lint auto-fix findings are advisory and always continue to Test. Without that toolchain, the gate reports the unavailable formatting diagnostic and still runs version validation and the offline unit suite. The gate never runs broker integration tests.
